@@ -87,6 +87,7 @@ class BbCodeGenerator:
         }
 
         entry['type'].set("text")
+        entry['type'].configure(state="disabled")
 
         if key == "description":
             del entry['content']
@@ -95,6 +96,7 @@ class BbCodeGenerator:
         if key in BbCodeGenerator.default_keys:
             if key == "image":
                 entry['type'].set("image")
+                entry['size'].configure(state="disabled")
             else:
                 entry['checks']['b'][1].set(True)
                 entry['size'].set(6)
