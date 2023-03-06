@@ -53,6 +53,7 @@ class BbCodeGenerator:
         self._window = Tk()
         self._window.title(heading)
         self._last_row = 0
+        self._last_rank = 2 # Title and Description are 0 and 1.
 
         self._default_entries = {}
         self._additional_entries = {}
@@ -75,6 +76,7 @@ class BbCodeGenerator:
         ]
         entry = {
             'key' : key,
+            'rank': Combobox(self._window, values=list(range(1,101)), width=2),
             'key_label': Label(self._window, text=key, font=(BbCodeGenerator.default_font_type, 10)),
             'label': Entry(self._window, width=15),
             'type': Combobox(self._window, values=BbCodeGenerator.type_values, width=6),
@@ -85,9 +87,16 @@ class BbCodeGenerator:
             },
             'content': Entry(self._window, width=100)
         }
-
         entry['type'].set("text")
         entry['type'].configure(state="disabled")
+
+        if key == "title":
+            entry['rank'].set(0)
+        elif key == "description":
+            entry['rank'].set(1)
+        else:
+            entry['rank'].set(self._last_rank)
+            self._last_rank += 1
 
         if key == "description":
             del entry['content']
@@ -113,13 +122,14 @@ class BbCodeGenerator:
 
         return entry
 
-    def _make_empty_entry(self, key):
+    def _make_empty_entry(self, key, rank=0):
         bools = [
             BooleanVar()
             for key in BbCodeGenerator.check_keys
         ]
         entry = {
             'key': key,
+            'rank': Combobox(self._window, values=list(range(0,101)), width=2),
             'key_label': Label(self._window, text=key, font=(BbCodeGenerator.default_font_type, 10)),
             'label': Entry(self._window, width=15),
             'type': Combobox(self._window, values=BbCodeGenerator.type_values, width=6),
@@ -132,22 +142,26 @@ class BbCodeGenerator:
         }
         entry['type'].set("text")
         entry['size'].set(6)
+        
+        entry['rank'].set(self._last_rank)
+        self._last_rank += 1
 
         return entry
 
     def _place_entry(self, entry):
         entry['key_label'].grid(row=self._last_row, column=0)
-        entry['label'].grid(row=self._last_row, column=1)
-        entry['type'].grid(row=self._last_row, column=2)
-        entry['size'].grid(row=self._last_row, column=3)
+        entry['rank'].grid(row=self._last_row, column=1)
+        entry['label'].grid(row=self._last_row, column=2)
+        entry['type'].grid(row=self._last_row, column=3)
+        entry['size'].grid(row=self._last_row, column=4)
         for idx,box in enumerate(entry['checks'].values()):
-            box[0].grid(row=self._last_row, column=idx+4)
-        entry['content'].grid(row=self._last_row, column=len(entry['checks'])+4)
+            box[0].grid(row=self._last_row, column=idx+5)
+        entry['content'].grid(row=self._last_row, column=len(entry['checks'])+5)
 
     def _default_window(self):
         self._header_labels = [
             Label(self._window, text = label_text, font=(BbCodeGenerator.default_font_type, 12))
-            for label_text in ("key", "label", "type", "size", "B", "I", "U", "S", "content")
+            for label_text in ("key", "rank", "label", "type", "size", "B", "I", "U", "S", "content")
         ]
         for idx,label in enumerate(self._header_labels):
             label.grid(row=self._last_row, column=idx)
@@ -167,7 +181,7 @@ class BbCodeGenerator:
     def _update_textbox_positions(self):
         self._place_entry(self._default_entries['description'])
         self._last_row +=1
-        self._text_box_bbcode.grid(row=self._last_row, column=len(self._default_entries['description']['checks'])+4)
+        self._text_box_bbcode.grid(row=self._last_row, column=len(self._default_entries['description']['checks'])+5)
 
     def _update_button_position(self):
         self._button_add_entries.grid(column=0, row=self._last_row)
@@ -188,22 +202,33 @@ class BbCodeGenerator:
 
     def _generate_bbc(self):
         bbcode = [
-            BbCodeGenerator.entry_to_bbcode(self._default_entries[entry])
+            (
+                self._default_entries[entry]['rank'].get(),
+                BbCodeGenerator.entry_to_bbcode(self._default_entries[entry])
+            )
             for entry in self._default_entries
             if entry != "description"
         ]
         
         bbcode.extend([
-            BbCodeGenerator.entry_to_bbcode(self._additional_entries[entry])
+            (
+                self._additional_entries[entry]['rank'].get(),
+                BbCodeGenerator.entry_to_bbcode(self._additional_entries[entry])
+            )
             for entry in self._additional_entries
         ])
         
-        bbcode.append(BbCodeGenerator.entry_to_bbcode(self._default_entries['description']))
+        bbcode.append(
+            (
+                self._default_entries['description']['rank'].get(),
+                BbCodeGenerator.entry_to_bbcode(self._default_entries['description'])
+            )
+        )
         
 
         filtered_bbcode = [
             code
-            for code in bbcode
+            for rank, code in sorted(bbcode, key=lambda d: d[0])
             if code is not None
         ]
         bbcodetext = "\n".join(filtered_bbcode)
